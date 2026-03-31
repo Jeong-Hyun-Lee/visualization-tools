@@ -171,37 +171,42 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     const paddingTop = 28;
     const paddingBottom = 18;
 
-    const groupNode = this.graph.addNode({
-      shape: 'rect',
-      x: minX - paddingX,
-      y: minY - paddingTop,
-      width: maxX - minX + paddingX * 2,
-      height: maxY - minY + paddingTop + paddingBottom,
-      attrs: {
-        body: {
-          fill: 'transparent',
-          stroke: '#93C5FD',
-          strokeWidth: 1,
-          strokeDasharray: '6 4',
-          rx: 10,
-          ry: 10,
+    this.graph.startBatch('grouping', { ui: true });
+    try {
+      const groupNode = this.graph.addNode({
+        shape: 'rect',
+        x: minX - paddingX,
+        y: minY - paddingTop,
+        width: maxX - minX + paddingX * 2,
+        height: maxY - minY + paddingTop + paddingBottom,
+        attrs: {
+          body: {
+            fill: 'transparent',
+            stroke: '#93C5FD',
+            strokeWidth: 1,
+            strokeDasharray: '6 4',
+            rx: 10,
+            ry: 10,
+          },
+          label: {
+            text: 'GROUP',
+            fill: '#1E3A8A',
+            fontSize: 11,
+            fontWeight: 700,
+            textAnchor: 'start',
+            textVerticalAnchor: 'middle',
+            refX: 10,
+            refY: 14,
+          },
         },
-        label: {
-          text: 'GROUP',
-          fill: '#1E3A8A',
-          fontSize: 11,
-          fontWeight: 700,
-          textAnchor: 'start',
-          textVerticalAnchor: 'middle',
-          refX: 10,
-          refY: 14,
-        },
-      },
-      data: { kind: 'bay-group' },
-    } as Node.Metadata);
+        data: { kind: 'bay-group' },
+      } as Node.Metadata);
 
-    selectedNodes.forEach((n) => groupNode.addChild(n));
-    this.graph.resetSelection([groupNode, ...selectedNodes]);
+      selectedNodes.forEach((n) => groupNode.addChild(n));
+      this.graph.resetSelection([groupNode, ...selectedNodes]);
+    } finally {
+      this.graph.stopBatch('grouping', { ui: true });
+    }
   }
 
   ungroupSelected(): void {
@@ -217,19 +222,24 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     }
 
     const ungrouped: Node[] = [];
-    selectedNodes.forEach((groupNode) => {
-      const kind = groupNode.getData<{ kind?: string }>()?.kind;
-      const children = (groupNode.getChildren() || []).filter((c) =>
-        c.isNode(),
-      ) as Node[];
-      if (!children.length || kind !== 'bay-group') {
-        return;
-      }
-      // setParent(null)만 호출하면 parent.children 배열이 남아있을 수 있어 unembed로 관계를 정리합니다.
-      children.forEach((child) => groupNode.unembed(child));
-      groupNode.remove({ deep: false });
-      ungrouped.push(...children);
-    });
+    this.graph.startBatch('ungrouping', { ui: true });
+    try {
+      selectedNodes.forEach((groupNode) => {
+        const kind = groupNode.getData<{ kind?: string }>()?.kind;
+        const children = (groupNode.getChildren() || []).filter((c) =>
+          c.isNode(),
+        ) as Node[];
+        if (!children.length || kind !== 'bay-group') {
+          return;
+        }
+        // setParent(null)만 호출하면 parent.children 배열이 남아있을 수 있어 unembed로 관계를 정리합니다.
+        children.forEach((child) => groupNode.unembed(child));
+        groupNode.remove({ deep: false });
+        ungrouped.push(...children);
+      });
+    } finally {
+      this.graph.stopBatch('ungrouping', { ui: true });
+    }
 
     if (ungrouped.length) {
       this.graph.resetSelection(ungrouped);
@@ -318,7 +328,22 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
         showNodeSelectionBox: true,
       }),
     );
-    g.use(new History({ enabled: true }));
+    g.use(
+      new History({
+        enabled: true,
+        beforeAddCommand: (event, args) => {
+          const eventArgs = args as { options?: Record<string, unknown>; key?: string };
+          if (eventArgs.options?.['ignoreHistory']) {
+            return false;
+          }
+          // setPortProp()로 발생하는 포트 스타일 변경은 undo/redo에서 제외
+          if (event === 'cell:change:*' && eventArgs.key === 'ports') {
+            return false;
+          }
+          return true;
+        },
+      }),
+    );
     g.use(new Keyboard({ enabled: true }));
     g.use(new Clipboard({ enabled: true }));
 
@@ -766,12 +791,14 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
       portId,
       'attrs/circle/style/visibility',
       visible ? 'visible' : 'hidden',
+      { ignoreHistory: true },
     );
   }
 
   private setPortColor(node: Node, portId: string, color: string): void {
-    node.setPortProp(portId, 'attrs/circle/fill', color);
-    node.setPortProp(portId, 'attrs/circle/stroke', color);
+    const options = { ignoreHistory: true };
+    node.setPortProp(portId, 'attrs/circle/fill', color, options);
+    node.setPortProp(portId, 'attrs/circle/stroke', color, options);
   }
 
   private setPortDot(
