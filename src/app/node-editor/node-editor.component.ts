@@ -276,6 +276,7 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     this.bindEdgeTools(g);
     this.bindPortStateWithEdges(g);
     this.bindDisconnectorSwitch(g);
+    this.bindBayTemplateDrop(g);
 
     this.graph = g;
     this.initStencil(g);
@@ -286,22 +287,34 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
       title: '전기 단선도 팔레트',
       target: graph,
       stencilGraphWidth: 240,
-      stencilGraphHeight: 480,
-      layoutOptions: { columns: 1, columnWidth: 230, rowHeight: 88, dx: 8 },
+      stencilGraphHeight: 560,
+      collapsable: true,
       groups: [
         {
           title: '노드 그룹',
-          collapsable: false,
+          collapsable: true,
           name: 'sld-node',
-          graphHeight: 360,
-          layoutOptions: { rowHeight: 88 },
+          graphHeight: 560,
+          layoutOptions: {
+            columns: 1,
+            columnWidth: 230,
+            rowHeight: 96,
+            dx: 0,
+            dy: 8,
+          },
         },
         {
-          title: '기타 그룹',
-          collapsable: false,
-          name: 'sld-other',
-          graphHeight: 280,
-          layoutOptions: { rowHeight: 88 },
+          title: '베이 그룹',
+          collapsable: true,
+          name: 'sld-bay-group',
+          graphHeight: 220,
+          layoutOptions: {
+            columns: 1,
+            columnWidth: 230,
+            rowHeight: 96,
+            dx: 0,
+            dy: 8,
+          },
         },
       ],
     });
@@ -330,19 +343,170 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
           buildSldBreakerMeta(SLD_PORTS_BREAKER),
           buildSldLoadMeta(SLD_PORTS_LOAD),
           buildSldTransformerMeta(SLD_PORTS_TRANSFORMER),
+          buildSldDisconnectorMeta(SLD_PORTS_DISCONNECTOR),
+          buildSldGroundMeta(SLD_PORTS_GROUND),
+          buildSldGeneratorMeta(SLD_PORTS_GENERATOR),
         ],
         'sld-node',
       );
 
       this.stencil.load(
         [
-          buildSldDisconnectorMeta(SLD_PORTS_DISCONNECTOR),
-          buildSldGroundMeta(SLD_PORTS_GROUND),
-          buildSldGeneratorMeta(SLD_PORTS_GENERATOR),
+          this.buildBayTemplateMeta(
+            'bay-template-3',
+            '베이 템플릿 (3)',
+            'BUS + CB + LOAD',
+          ),
+          this.buildBayTemplateMeta(
+            'bay-template-4',
+            '베이 템플릿 (4)',
+            'BUS + CB + TR + GEN',
+          ),
         ],
-        'sld-other',
+        'sld-bay-group',
       );
     }
+  }
+
+  private buildBayTemplateMeta(
+    kind: 'bay-template-3' | 'bay-template-4',
+    title: string,
+    subtitle: string,
+  ): Node.Metadata {
+    return {
+      shape: 'rect',
+      width: 220,
+      height: 64,
+      attrs: {
+        body: {
+          stroke: '#93C5FD',
+          strokeWidth: 1,
+          fill: '#EFF6FF',
+          rx: 10,
+          ry: 10,
+        },
+        label: {
+          text: `${title}\n${subtitle}`,
+          fill: '#1E3A8A',
+          fontSize: 12,
+          fontWeight: 600,
+          textAnchor: 'middle',
+          textVerticalAnchor: 'middle',
+        },
+      },
+      data: { kind },
+    };
+  }
+
+  private bindBayTemplateDrop(graph: Graph): void {
+    graph.on('node:added', ({ node, options }) => {
+      const kind = node.getData<{ kind?: string }>()?.kind;
+      if (
+        (kind !== 'bay-template-3' && kind !== 'bay-template-4') ||
+        options?.['templateExpanded']
+      ) {
+        return;
+      }
+
+      const origin = node.getPosition();
+      const templateTitle =
+        kind === 'bay-template-3' ? 'BAY TEMPLATE (3)' : 'BAY TEMPLATE (4)';
+      const templates =
+        kind === 'bay-template-3'
+          ? [
+              buildSldBusMeta(buildSldPorts('horizontal')),
+              buildSldBreakerMeta(SLD_PORTS_BREAKER),
+              buildSldLoadMeta(SLD_PORTS_LOAD),
+            ]
+          : [
+              buildSldBusMeta(buildSldPorts('horizontal')),
+              buildSldBreakerMeta(SLD_PORTS_BREAKER),
+              buildSldTransformerMeta(SLD_PORTS_TRANSFORMER),
+              buildSldGeneratorMeta(SLD_PORTS_GENERATOR),
+            ];
+
+      const spacing = 220;
+      const y = origin.y;
+
+      graph.removeNode(node);
+      const created = templates.map((meta, idx) =>
+        graph.addNode({
+          ...meta,
+          x: origin.x + idx * spacing,
+          y,
+        } as Node.Metadata, { templateExpanded: true }),
+      );
+      for (let i = 0; i < created.length - 1; i += 1) {
+        const sourcePort = this.getPortIdByGroup(created[i], 'right');
+        const targetPort = this.getPortIdByGroup(created[i + 1], 'left');
+        if (!sourcePort || !targetPort) {
+          continue;
+        }
+        graph.addEdge(
+          {
+            shape: 'sld-edge',
+            source: { cell: created[i].id, port: sourcePort },
+            target: { cell: created[i + 1].id, port: targetPort },
+            attrs: {
+              line: {
+                stroke: '#1F1F1F',
+                strokeWidth: 2,
+              },
+            },
+          },
+          { templateExpanded: true },
+        );
+      }
+
+      const boxes = created.map((n) => n.getBBox());
+      const minX = Math.min(...boxes.map((b) => b.x));
+      const minY = Math.min(...boxes.map((b) => b.y));
+      const maxX = Math.max(...boxes.map((b) => b.x + b.width));
+      const maxY = Math.max(...boxes.map((b) => b.y + b.height));
+      const paddingX = 24;
+      const paddingTop = 30;
+      const paddingBottom = 18;
+
+      const bayGroup = graph.addNode(
+        {
+          shape: 'rect',
+          x: minX - paddingX,
+          y: minY - paddingTop,
+          width: maxX - minX + paddingX * 2,
+          height: maxY - minY + paddingTop + paddingBottom,
+          attrs: {
+            body: {
+              fill: 'transparent',
+              stroke: '#93C5FD',
+              strokeWidth: 1,
+              strokeDasharray: '6 4',
+              rx: 10,
+              ry: 10,
+            },
+            label: {
+              text: templateTitle,
+              fill: '#1E3A8A',
+              fontSize: 11,
+              fontWeight: 700,
+              textAnchor: 'start',
+              textVerticalAnchor: 'middle',
+              refX: 10,
+              refY: 14,
+            },
+          },
+          data: { kind: 'bay-group' },
+        } as Node.Metadata,
+        { templateExpanded: true },
+      );
+
+      created.forEach((n) => bayGroup.addChild(n));
+      graph.resetSelection([bayGroup, ...created]);
+    });
+  }
+
+  private getPortIdByGroup(node: Node, group: 'left' | 'right'): string | null {
+    const port = node.getPorts().find((p) => p.group === group);
+    return (port?.id as string | undefined) ?? null;
   }
 
   private bindPortHover(graph: Graph): void {
