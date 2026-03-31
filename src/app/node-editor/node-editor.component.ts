@@ -428,14 +428,14 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
       title: '전기 단선도 팔레트',
       target: graph,
       stencilGraphWidth: 240,
-      stencilGraphHeight: 560,
+      stencilGraphHeight: 700,
       collapsable: true,
       groups: [
         {
           title: '노드 그룹',
           collapsable: true,
           name: 'sld-node',
-          graphHeight: 560,
+          graphHeight: 700,
           layoutOptions: {
             columns: 1,
             columnWidth: 230,
