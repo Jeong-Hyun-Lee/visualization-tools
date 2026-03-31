@@ -11,6 +11,7 @@ import {
 import { Edge, Graph, Node } from '@antv/x6';
 import { History } from '@antv/x6-plugin-history';
 import { Keyboard } from '@antv/x6-plugin-keyboard';
+import { MiniMap } from '@antv/x6-plugin-minimap';
 import { Selection } from '@antv/x6-plugin-selection';
 import { Snapline } from '@antv/x6-plugin-snapline';
 import { Stencil } from '@antv/x6-plugin-stencil';
@@ -54,6 +55,9 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('graphHost', { static: true })
   graphHost!: ElementRef<HTMLDivElement>;
+
+  @ViewChild('minimapHost', { static: true })
+  minimapHost!: ElementRef<HTMLDivElement>;
 
   private graph?: Graph;
   private stencil?: Stencil;
@@ -286,6 +290,14 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     });
 
     g.use(new Snapline({ enabled: true }));
+    g.use(
+      new MiniMap({
+        container: this.minimapHost.nativeElement,
+        width: 220,
+        height: 140,
+        padding: 8,
+      }),
+    );
     g.use(
       new Transform({
         rotating: true,
@@ -525,11 +537,14 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
 
       graph.removeNode(node);
       const created = templates.map((meta, idx) =>
-        graph.addNode({
-          ...meta,
-          x: origin.x + idx * spacing,
-          y,
-        } as Node.Metadata, { templateExpanded: true }),
+        graph.addNode(
+          {
+            ...meta,
+            x: origin.x + idx * spacing,
+            y,
+          } as Node.Metadata,
+          { templateExpanded: true },
+        ),
       );
       for (let i = 0; i < created.length - 1; i += 1) {
         const sourcePort = this.getPortIdByGroup(created[i], 'right');
