@@ -379,6 +379,7 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
 
     g.on('history:change', () => this.cdr.markForCheck());
 
+    this.bindMinimapContentRefresh(g);
     this.bindPortHover(g);
     this.bindEdgeTools(g);
     this.bindPortStateWithEdges(g);
@@ -387,6 +388,39 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
 
     this.graph = g;
     this.initStencil(g);
+  }
+
+  /**
+   * MiniMap은 기본적으로 translate/scale(또는 Scroller의 scroll)만 구독합니다.
+   * 노드 이동·리사이즈·엣지 꺾임은 그래프 변환을 바꾸지 않아 뷰포트/축소 preview가
+   * 어긋날 수 있으므로, geometry 변경 시 미니맵과 동일 모델의 target 그래프를 다시 맞춥니다.
+   */
+  private bindMinimapContentRefresh(g: Graph): void {
+    type MinimapInternal = {
+      updateViewport(): void;
+      targetGraph: Graph;
+    };
+    const plugin = g.getPlugin('minimap') as MinimapInternal | undefined;
+    if (!plugin?.updateViewport || !plugin.targetGraph) {
+      return;
+    }
+
+    let raf = 0;
+    const schedule = (): void => {
+      if (raf !== 0) {
+        return;
+      }
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        plugin.targetGraph.zoomToFit({ padding: 4 });
+        plugin.updateViewport();
+      });
+    };
+
+    g.on('node:change:position', schedule);
+    g.on('node:change:size', schedule);
+    g.on('node:change:angle', schedule);
+    g.on('edge:change:vertices', schedule);
   }
 
   private initStencil(graph: Graph): void {
