@@ -145,6 +145,93 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  groupSelected(): void {
+    if (!this.graph) {
+      return;
+    }
+    const selectedNodes = this.graph
+      .getSelectedCells()
+      .filter((c) => c.isNode())
+      .map((c) => c as Node)
+      .filter((n) => !n.getParent());
+    if (selectedNodes.length < 2) {
+      return;
+    }
+
+    const boxes = selectedNodes.map((n) => n.getBBox());
+    const minX = Math.min(...boxes.map((b) => b.x));
+    const minY = Math.min(...boxes.map((b) => b.y));
+    const maxX = Math.max(...boxes.map((b) => b.x + b.width));
+    const maxY = Math.max(...boxes.map((b) => b.y + b.height));
+    const paddingX = 24;
+    const paddingTop = 28;
+    const paddingBottom = 18;
+
+    const groupNode = this.graph.addNode({
+      shape: 'rect',
+      x: minX - paddingX,
+      y: minY - paddingTop,
+      width: maxX - minX + paddingX * 2,
+      height: maxY - minY + paddingTop + paddingBottom,
+      attrs: {
+        body: {
+          fill: 'transparent',
+          stroke: '#93C5FD',
+          strokeWidth: 1,
+          strokeDasharray: '6 4',
+          rx: 10,
+          ry: 10,
+        },
+        label: {
+          text: 'GROUP',
+          fill: '#1E3A8A',
+          fontSize: 11,
+          fontWeight: 700,
+          textAnchor: 'start',
+          textVerticalAnchor: 'middle',
+          refX: 10,
+          refY: 14,
+        },
+      },
+      data: { kind: 'bay-group' },
+    } as Node.Metadata);
+
+    selectedNodes.forEach((n) => groupNode.addChild(n));
+    this.graph.resetSelection([groupNode, ...selectedNodes]);
+  }
+
+  ungroupSelected(): void {
+    if (!this.graph) {
+      return;
+    }
+    const selectedNodes = this.graph
+      .getSelectedCells()
+      .filter((c) => c.isNode())
+      .map((c) => c as Node);
+    if (!selectedNodes.length) {
+      return;
+    }
+
+    const ungrouped: Node[] = [];
+    selectedNodes.forEach((groupNode) => {
+      const kind = groupNode.getData<{ kind?: string }>()?.kind;
+      const children = (groupNode.getChildren() || []).filter((c) =>
+        c.isNode(),
+      ) as Node[];
+      if (!children.length || kind !== 'bay-group') {
+        return;
+      }
+      // setParent(null)만 호출하면 parent.children 배열이 남아있을 수 있어 unembed로 관계를 정리합니다.
+      children.forEach((child) => groupNode.unembed(child));
+      groupNode.remove({ deep: false });
+      ungrouped.push(...children);
+    });
+
+    if (ungrouped.length) {
+      this.graph.resetSelection(ungrouped);
+    }
+  }
+
   private initGraph(): void {
     let g: Graph;
     g = new Graph({
@@ -267,6 +354,14 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
           g.select(pastedCells);
         }
       }
+      return false;
+    });
+    g.bindKey(['meta+g', 'ctrl+g'], () => {
+      this.groupSelected();
+      return false;
+    });
+    g.bindKey(['meta+shift+g', 'ctrl+shift+g'], () => {
+      this.ungroupSelected();
       return false;
     });
 

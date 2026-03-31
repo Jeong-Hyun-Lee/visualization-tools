@@ -45,6 +45,28 @@
 
       <button
         mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="groupSelected()"
+        matTooltip="선택 노드 그룹화 (Ctrl+G)"
+      >
+        <mat-icon>folder_open</mat-icon>
+        그룹
+      </button>
+
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="ungroupSelected()"
+        matTooltip="그룹 해제 (Ctrl+Shift+G)"
+      >
+        <mat-icon>folder_off</mat-icon>
+        언그룹
+      </button>
+
+      <button
+        mat-flat-button
         class="editor__action-btn editor__action-btn--danger"
         type="button"
         (click)="deleteSelected()"
