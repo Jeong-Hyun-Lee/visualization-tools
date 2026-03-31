@@ -1,0 +1,55 @@
+.spacer {
+  flex: 1 1 auto;
+}
+
+main {
+  min-height: calc(100% - 64px);
+}
+
+.app-toolbar {
+  min-height: 64px;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.app-toolbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-toolbar__logo {
+  color: #2563eb;
+}
+
+.brand {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+}
+
+.app-toolbar__chip {
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.app-toolbar__action {
+  border-radius: 10px;
+  height: 36px;
+  padding: 0 0.75rem;
+  font-weight: 500;
+  color: #0f172a;
+  background: #eef2ff;
+  border: 1px solid #dbe3ff;
+}
+
+.app-toolbar__action:hover {
+  background: #e0e7ff;
+}

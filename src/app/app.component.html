@@ -1,0 +1,16 @@
+<mat-toolbar class="app-toolbar" color="transparent">
+  <div class="app-toolbar__brand">
+    <mat-icon class="app-toolbar__logo">bolt</mat-icon>
+    <span class="brand">{{ title }}</span>
+    <span class="app-toolbar__chip">Node Editor</span>
+  </div>
+  <span class="spacer"></span>
+  <button mat-flat-button class="app-toolbar__action" type="button">
+    <mat-icon>settings</mat-icon>
+    Settings
+  </button>
+</mat-toolbar>
+
+<main>
+  <router-outlet></router-outlet>
+</main>

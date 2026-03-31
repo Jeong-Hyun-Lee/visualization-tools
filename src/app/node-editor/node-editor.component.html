@@ -1,0 +1,73 @@
+<div class="editor">
+  <mat-toolbar class="editor__topbar" color="transparent">
+    <div class="editor__title-wrap">
+      <mat-icon class="editor__title-icon">account_tree</mat-icon>
+      <div class="editor__title">Single Line Diagram</div>
+    </div>
+
+    <span class="editor__topbar-spacer"></span>
+
+    <div class="editor__topbar-actions" role="toolbar" aria-label="편집 도구">
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="undo()"
+        [disabled]="!canUndo()"
+        matTooltip="실행 취소 (Ctrl+Z)"
+      >
+        <mat-icon>undo</mat-icon>
+        실행 취소
+      </button>
+
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="redo()"
+        [disabled]="!canRedo()"
+        matTooltip="다시 실행"
+      >
+        <mat-icon>redo</mat-icon>
+        다시 실행
+      </button>
+
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="zoomToFit()"
+        matTooltip="전체가 보이게 맞춤"
+      >
+        <mat-icon>fit_screen</mat-icon>
+        맞춤
+      </button>
+
+      <button
+        mat-flat-button
+        class="editor__action-btn editor__action-btn--danger"
+        type="button"
+        (click)="deleteSelected()"
+        matTooltip="선택된 셀 삭제 (Del/Backspace)"
+      >
+        <mat-icon>delete_outline</mat-icon>
+        삭제
+      </button>
+    </div>
+  </mat-toolbar>
+
+  <div class="editor__body">
+    <div #stencilHost class="editor__stencil" aria-label="Stencil 패널"></div>
+
+    <div
+      #graphHost
+      class="editor__canvas"
+      role="application"
+      aria-label="다이어그램 캔버스"
+    ></div>
+  </div>
+
+  <div class="editor__error" *ngIf="stencilError">
+    {{ stencilError }}
+  </div>
+</div>
