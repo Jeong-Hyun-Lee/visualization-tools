@@ -221,12 +221,9 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
           this.graph!.centerContent({ padding: 24 });
           this.showIoMessage('다이어그램을 불러왔습니다.');
         } catch (err) {
-          const detail =
-            err instanceof Error ? err.message : String(err);
+          const detail = err instanceof Error ? err.message : String(err);
           console.error('SLD import failed', err);
-          this.showIoMessage(
-            `가져오기에 실패했습니다. ${detail}`,
-          );
+          this.showIoMessage(`가져오기에 실패했습니다. ${detail}`);
         }
         this.cdr.markForCheck();
       });
@@ -460,7 +457,10 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
       new History({
         enabled: true,
         beforeAddCommand: (event, args) => {
-          const eventArgs = args as { options?: Record<string, unknown>; key?: string };
+          const eventArgs = args as {
+            options?: Record<string, unknown>;
+            key?: string;
+          };
           if (eventArgs.options?.['ignoreHistory']) {
             return false;
           }
@@ -580,6 +580,11 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     const stencil = new Stencil({
       title: '전기 단선도 팔레트',
       target: graph,
+      search(cell, keyword) {
+        const lowerKeyword = keyword.toLowerCase();
+        return cell.shape.indexOf(lowerKeyword) !== -1;
+      },
+      placeholder: '검색어를 입력하세요',
       stencilGraphWidth: 240,
       stencilGraphHeight: 700,
       collapsable: true,
