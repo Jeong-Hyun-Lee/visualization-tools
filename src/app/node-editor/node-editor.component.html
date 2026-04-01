@@ -47,6 +47,36 @@
         mat-flat-button
         class="editor__action-btn"
         type="button"
+        (click)="exportDiagram()"
+        matTooltip="다이어그램을 JSON 파일로 저장"
+      >
+        <mat-icon>file_download</mat-icon>
+        보내기
+      </button>
+
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
+        (click)="openImportFilePicker()"
+        matTooltip="JSON 파일에서 다이어그램 불러오기"
+      >
+        <mat-icon>file_upload</mat-icon>
+        가져오기
+      </button>
+
+      <input
+        #importFileInput
+        type="file"
+        accept=".json,application/json"
+        hidden
+        (change)="onImportFileSelected($event)"
+      />
+
+      <button
+        mat-flat-button
+        class="editor__action-btn"
+        type="button"
         (click)="groupSelected()"
         matTooltip="선택 노드 그룹화 (Ctrl+G)"
       >
@@ -77,6 +107,10 @@
       </button>
     </div>
   </mat-toolbar>
+
+  <div class="editor__io-message" *ngIf="ioMessage" role="status">
+    {{ ioMessage }}
+  </div>
 
   <div class="editor__body">
     <div #stencilHost class="editor__stencil" aria-label="Stencil 패널"></div>

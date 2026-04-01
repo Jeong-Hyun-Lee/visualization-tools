@@ -5,6 +5,7 @@ import {
   Component,
   ElementRef,
   HostListener,
+  NgZone,
   OnDestroy,
   ViewChild,
 } from '@angular/core';
@@ -59,15 +60,25 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('minimapHost', { static: true })
   minimapHost!: ElementRef<HTMLDivElement>;
 
+  @ViewChild('importFileInput', { static: true })
+  importFileInput!: ElementRef<HTMLInputElement>;
+
   private graph?: Graph;
   private stencil?: Stencil;
 
   stencilLoaded = false;
   stencilError: string | null = null;
 
-  private spaceDown = false;
+  /** 가져오기/보내기 결과 안내 */
+  ioMessage: string | null = null;
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  private spaceDown = false;
+  private ioMessageTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly ngZone: NgZone,
+  ) {}
 
   ngAfterViewInit(): void {
     ensureGlobalX6Styles();
@@ -79,6 +90,10 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.ioMessageTimer) {
+      clearTimeout(this.ioMessageTimer);
+      this.ioMessageTimer = null;
+    }
     this.stencil?.dispose();
     this.stencil = undefined;
 
@@ -147,6 +162,119 @@ export class NodeEditorComponent implements AfterViewInit, OnDestroy {
     if (cells.length) {
       this.graph.removeCells(cells);
     }
+  }
+
+  exportDiagram(): void {
+    if (!this.graph) {
+      return;
+    }
+    const graph = this.graph.toJSON();
+    const payload = {
+      format: 'ge-vernova-sld',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      graph,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sld-diagram-${stamp}.json`;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    this.showIoMessage('다이어그램을 JSON 파일로 저장했습니다.');
+  }
+
+  openImportFilePicker(): void {
+    const input = this.importFileInput?.nativeElement;
+    if (!input) {
+      return;
+    }
+    input.value = '';
+    input.click();
+  }
+
+  onImportFileSelected(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.graph) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.ngZone.run(() => {
+        try {
+          const raw = reader.result as string;
+          const text = raw.replace(/^\uFEFF/, '');
+          const parsed = JSON.parse(text) as unknown;
+          const graphData = this.parseImportPayload(parsed);
+          // silent: true 이면 model reseted/added가 발생하지 않아 Scheduler가 캔버스를 다시 그리지 않음
+          this.graph!.fromJSON(graphData);
+          this.graph!.cleanHistory();
+          this.graph!.cleanSelection();
+          this.graph!.centerContent({ padding: 24 });
+          this.showIoMessage('다이어그램을 불러왔습니다.');
+        } catch (err) {
+          const detail =
+            err instanceof Error ? err.message : String(err);
+          console.error('SLD import failed', err);
+          this.showIoMessage(
+            `가져오기에 실패했습니다. ${detail}`,
+          );
+        }
+        this.cdr.markForCheck();
+      });
+    };
+    reader.onerror = () => {
+      this.ngZone.run(() => {
+        this.showIoMessage('파일을 읽을 수 없습니다.');
+        this.cdr.markForCheck();
+      });
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  private parseImportPayload(data: unknown): { cells: object[] } {
+    if (Array.isArray(data)) {
+      return { cells: data as object[] };
+    }
+    if (data == null || typeof data !== 'object') {
+      throw new Error('invalid root');
+    }
+    const root = data as Record<string, unknown>;
+    if (root['format'] === 'ge-vernova-sld' && root['graph'] != null) {
+      const g = root['graph'];
+      if (g != null && typeof g === 'object') {
+        const cells = (g as Record<string, unknown>)['cells'];
+        if (Array.isArray(cells)) {
+          return { cells: cells as object[] };
+        }
+      }
+      throw new Error('missing graph.cells');
+    }
+    if (Array.isArray(root['cells'])) {
+      return { cells: root['cells'] as object[] };
+    }
+    throw new Error('unsupported format');
+  }
+
+  private showIoMessage(text: string): void {
+    if (this.ioMessageTimer) {
+      clearTimeout(this.ioMessageTimer);
+    }
+    this.ioMessage = text;
+    this.ioMessageTimer = setTimeout(() => {
+      this.ioMessage = null;
+      this.ioMessageTimer = null;
+      this.cdr.markForCheck();
+    }, 4500);
+    this.cdr.markForCheck();
   }
 
   groupSelected(): void {
