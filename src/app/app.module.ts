@@ -7,11 +7,13 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { MaterialModule } from './material/material.module';
 import { NodeEditorComponent } from './node-editor/node-editor.component';
+import { DiagramWorkspaceComponent } from './diagram-workspace/diagram-workspace.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     NodeEditorComponent,
+    DiagramWorkspaceComponent,
   ],
   imports: [
     BrowserModule,

@@ -1,9 +1,18 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .spacer {
   flex: 1 1 auto;
 }
 
 main {
-  min-height: calc(100% - 64px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .app-toolbar {

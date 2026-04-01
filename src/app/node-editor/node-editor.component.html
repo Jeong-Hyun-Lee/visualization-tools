@@ -1,130 +1,44 @@
-<div class="editor">
-  <mat-toolbar class="editor__topbar" color="transparent">
-    <div class="editor__title-wrap">
-      <mat-icon class="editor__title-icon">account_tree</mat-icon>
-      <div class="editor__title">Single Line Diagram</div>
+<div class="layout">
+  <header class="layout__header">
+    <div class="layout__title-wrap">
+      <div class="layout__title">Substation Name</div>
     </div>
+    <button mat-stroked-button type="button" class="layout__add-btn" (click)="addDiagram()">
+      <mat-icon>add</mat-icon>
+      새 다이어그램
+    </button>
+  </header>
 
-    <span class="editor__topbar-spacer"></span>
-
-    <div class="editor__topbar-actions" role="toolbar" aria-label="편집 도구">
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="undo()"
-        [disabled]="!canUndo()"
-        matTooltip="실행 취소 (Ctrl+Z)"
+  <div class="layout__tabs" role="tablist" aria-label="다이어그램 탭">
+    <button
+      type="button"
+      class="layout__tab"
+      *ngFor="let diagram of diagrams"
+      [class.layout__tab--active]="diagram.id === activeDiagramId"
+      (click)="selectDiagram(diagram.id)"
+    >
+      <span>{{ diagram.name }}</span>
+      <mat-icon
+        class="layout__tab-close"
+        *ngIf="diagrams.length > 1"
+        (click)="closeDiagram(diagram.id, $event)"
       >
-        <mat-icon>undo</mat-icon>
-        실행 취소
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="redo()"
-        [disabled]="!canRedo()"
-        matTooltip="다시 실행"
-      >
-        <mat-icon>redo</mat-icon>
-        다시 실행
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="zoomToFit()"
-        matTooltip="전체가 보이게 맞춤"
-      >
-        <mat-icon>fit_screen</mat-icon>
-        맞춤
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="exportDiagram()"
-        matTooltip="다이어그램을 JSON 파일로 저장"
-      >
-        <mat-icon>file_download</mat-icon>
-        보내기
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="openImportFilePicker()"
-        matTooltip="JSON 파일에서 다이어그램 불러오기"
-      >
-        <mat-icon>file_upload</mat-icon>
-        가져오기
-      </button>
-
-      <input
-        #importFileInput
-        type="file"
-        accept=".json,application/json"
-        hidden
-        (change)="onImportFileSelected($event)"
-      />
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="groupSelected()"
-        matTooltip="선택 노드 그룹화 (Ctrl+G)"
-      >
-        <mat-icon>folder_open</mat-icon>
-        그룹
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn"
-        type="button"
-        (click)="ungroupSelected()"
-        matTooltip="그룹 해제 (Ctrl+Shift+G)"
-      >
-        <mat-icon>folder_off</mat-icon>
-        언그룹
-      </button>
-
-      <button
-        mat-flat-button
-        class="editor__action-btn editor__action-btn--danger"
-        type="button"
-        (click)="deleteSelected()"
-        matTooltip="선택된 셀 삭제 (Del/Backspace)"
-      >
-        <mat-icon>delete_outline</mat-icon>
-        삭제
-      </button>
-    </div>
-  </mat-toolbar>
-
-  <div class="editor__io-message" *ngIf="ioMessage" role="status">
-    {{ ioMessage }}
+        close
+      </mat-icon>
+    </button>
   </div>
 
-  <div class="editor__body">
-    <div #stencilHost class="editor__stencil" aria-label="Stencil 패널"></div>
+  <div class="layout__content">
+    <section class="layout__workspace">
+      <app-diagram-workspace
+        *ngFor="let diagram of diagrams"
+        [diagramName]="diagram.name"
+        [class.layout__workspace-item--hidden]="diagram.id !== activeDiagramId"
+      ></app-diagram-workspace>
+    </section>
 
-    <div
-      #graphHost
-      class="editor__canvas"
-      role="application"
-      aria-label="다이어그램 캔버스"
-    ></div>
+    <aside class="layout__properties" aria-label="Properties">
+      <div class="layout__properties-title">Properties</div>
+    </aside>
   </div>
-
-  <div class="editor__error" *ngIf="stencilError">
-    {{ stencilError }}
-  </div>
-  <div #minimapHost class="minimap-container" aria-label="미니맵"></div>
 </div>
