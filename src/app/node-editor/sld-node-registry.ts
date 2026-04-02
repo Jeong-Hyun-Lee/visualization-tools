@@ -225,7 +225,7 @@ export function registerSldShapes(): void {
           refR: `${(SLD_LOAD_RING_R / SLD_LOAD_H) * 100}%`,
           stroke: '#1F1F1F',
           strokeWidth: 2,
-          fill: '#FFFFFF',
+          fill: 'transparent',
         },
         label: {
           refX: '50%',
@@ -442,7 +442,7 @@ export function registerSldShapes(): void {
           refR: `${(SLD_LOAD_RING_R / SLD_LOAD_H) * 100}%`,
           stroke: '#1F1F1F',
           strokeWidth: 2,
-          fill: '#FFFFFF',
+          fill: 'transparent',
         },
         label: {
           refX: '50%',
