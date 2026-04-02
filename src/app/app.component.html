@@ -16,10 +16,50 @@
       <mat-icon>add</mat-icon>
       새 다이어그램
     </button>
-    <button mat-flat-button class="app-toolbar__action" type="button">
+    <button
+      mat-flat-button
+      class="app-toolbar__action"
+      type="button"
+      [matMenuTriggerFor]="settingsMenu"
+      aria-label="설정"
+      matTooltip="설정"
+    >
       <mat-icon>settings</mat-icon>
-      Settings
+      설정
     </button>
+    <mat-menu #settingsMenu="matMenu" class="app-settings-menu" xPosition="before">
+      <button mat-menu-item disabled type="button" class="app-settings-menu__heading">
+        테마
+      </button>
+      <button mat-menu-item type="button" (click)="onThemeSelect('light')">
+        <mat-icon [style.visibility]="theme === 'light' ? 'visible' : 'hidden'">
+          check
+        </mat-icon>
+        <span>라이트</span>
+      </button>
+      <button mat-menu-item type="button" (click)="onThemeSelect('dark')">
+        <mat-icon [style.visibility]="theme === 'dark' ? 'visible' : 'hidden'">
+          check
+        </mat-icon>
+        <span>다크</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item disabled type="button" class="app-settings-menu__heading">
+        언어
+      </button>
+      <button mat-menu-item type="button" (click)="onLanguageSelect('ko')">
+        <mat-icon [style.visibility]="language === 'ko' ? 'visible' : 'hidden'">
+          check
+        </mat-icon>
+        <span>한국어</span>
+      </button>
+      <button mat-menu-item type="button" (click)="onLanguageSelect('en')">
+        <mat-icon [style.visibility]="language === 'en' ? 'visible' : 'hidden'">
+          check
+        </mat-icon>
+        <span>English</span>
+      </button>
+    </mat-menu>
   </div>
 </mat-toolbar>
 
