@@ -102,7 +102,9 @@ export class DiagramWorkspaceComponent
   /** 부모(node-editor)에서 새 탭으로 JSON을 넣을 때만 전달, 적용 후 `pendingImportConsumed`로 비움 */
   @Input() pendingImportCells: object[] | null = null;
 
-  @Output() readonly pendingImportConsumed = new EventEmitter<void>();
+  @Output() readonly pendingImportConsumed = new EventEmitter<{
+    diagramId: string;
+  }>();
 
   /** 가져오기 버튼에서 읽은 파일 내용을 부모로 올려 새 탭에 적용 */
   @Output() readonly importToNewTab = new EventEmitter<{
@@ -408,12 +410,12 @@ export class DiagramWorkspaceComponent
       this.graph.cleanSelection();
       this.graph.centerContent({ padding: 24 });
       this.showIoMessage('다이어그램을 불러왔습니다.');
-      this.pendingImportConsumed.emit();
+      this.pendingImportConsumed.emit({ diagramId: this.diagramId });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('SLD pending import failed', err);
       this.showIoMessage(`가져오기에 실패했습니다. ${detail}`);
-      this.pendingImportConsumed.emit();
+      this.pendingImportConsumed.emit({ diagramId: this.diagramId });
     }
     this.cdr.markForCheck();
   }

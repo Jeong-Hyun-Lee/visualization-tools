@@ -57,3 +57,20 @@ export async function saveCurrentSldSessionToIndexDB(
   db.close();
 }
 
+export async function loadCurrentSldSessionFromIndexDB(): Promise<
+  SldSavedSession | null
+> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const req = tx.objectStore(STORE_NAME).get(CURRENT_KEY);
+
+  const result = await new Promise<SldSavedSession | null>((resolve, reject) => {
+    req.onsuccess = () => resolve((req.result as SldSavedSession | undefined) ?? null);
+    req.onerror = () => reject(req.error);
+  });
+
+  await txDone(tx);
+  db.close();
+  return result;
+}
+

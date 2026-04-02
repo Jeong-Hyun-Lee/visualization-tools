@@ -19,6 +19,7 @@ import { NewDiagramRequestService } from '../new-diagram-request.service';
 import { parseSldImportPayload } from './sld-import-payload';
 import {
   saveCurrentSldSessionToIndexDB,
+  loadCurrentSldSessionFromIndexDB,
   type SldSavedSession,
 } from '../indexdb/sld-session-indexdb';
 import { DiagramWorkspaceComponent } from '../diagram-workspace/diagram-workspace.component';
@@ -91,12 +92,46 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    void this.restoreFromIndexDB();
+
     this.newDiagramRequest.requested$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.addDiagram();
         this.cdr.markForCheck();
       });
+  }
+
+  private async restoreFromIndexDB(): Promise<void> {
+    try {
+      const session = await loadCurrentSldSessionFromIndexDB();
+      if (!session?.tabs?.length) {
+        return;
+      }
+
+      const tabs = session.tabs;
+      const pending: Record<string, object[]> = {};
+      let maxIdx = 0;
+
+      for (const t of tabs) {
+        const m = t.diagramId.match(/^sld-(\d+)$/);
+        if (m) {
+          maxIdx = Math.max(maxIdx, Number(m[1]));
+        }
+        const { cells } = parseSldImportPayload(t.payload as unknown);
+        pending[t.diagramId] = cells;
+      }
+
+      this.diagrams = tabs.map((t) => ({ id: t.diagramId, name: t.diagramName }));
+      this.activeDiagramId = tabs[0].diagramId;
+      this.pendingImports = pending;
+      this.nextDiagramIndex = Math.max(this.nextDiagramIndex, maxIdx + 1);
+      this.cdr.markForCheck();
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('IndexDB restore failed', err);
+      window.alert(`복원에 실패했습니다.\n${detail}`);
+    }
   }
 
   ngOnDestroy(): void {
@@ -117,8 +152,8 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
 
   propertiesVisible = true;
 
-  /** 새 탭 + Ctrl+I 가져오기 시 한 번만 자식에 전달 */
-  pendingImport: { diagramId: string; cells: object[] } | null = null;
+  /** pendingImportCells는 탭별로 다중 지원 */
+  private pendingImports: Record<string, object[]> = {};
 
   addDiagram(): void {
     const name = `SLD ${this.nextDiagramIndex}`;
@@ -195,14 +230,16 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   }
 
   pendingCellsForDiagram(diagramId: string): object[] | null {
-    return this.pendingImport?.diagramId === diagramId
-      ? this.pendingImport.cells
-      : null;
+    return this.pendingImports[diagramId] ?? null;
   }
 
-  onPendingImportConsumed(): void {
-    this.pendingImport = null;
-    this.cdr.markForCheck();
+  onPendingImportConsumed(ev: { diagramId: string }): void {
+    if (this.pendingImports[ev.diagramId] != null) {
+      const next = { ...this.pendingImports };
+      delete next[ev.diagramId];
+      this.pendingImports = next;
+      this.cdr.markForCheck();
+    }
   }
 
   /** 가져오기 버튼(import)에서 들어온 파일을 '무조건' 새 탭으로 생성 */
@@ -210,7 +247,7 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
     const tabName = this.tabNameFromFileName(ev.fileName);
     const id = `sld-${this.nextDiagramIndex}`;
     this.nextDiagramIndex += 1;
-    this.pendingImport = { diagramId: id, cells: ev.cells };
+    this.pendingImports = { ...this.pendingImports, [id]: ev.cells };
     this.diagrams = [...this.diagrams, { id, name: tabName }];
     this.activeDiagramId = id;
     this.cdr.markForCheck();
@@ -242,7 +279,7 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
           const tabName = this.tabNameFromFileName(file.name);
           const id = `sld-${this.nextDiagramIndex}`;
           this.nextDiagramIndex += 1;
-          this.pendingImport = { diagramId: id, cells };
+          this.pendingImports = { ...this.pendingImports, [id]: cells };
           this.diagrams = [...this.diagrams, { id, name: tabName }];
           this.activeDiagramId = id;
           this.cdr.markForCheck();
