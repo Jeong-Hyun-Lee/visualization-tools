@@ -30,6 +30,21 @@
         <mat-icon>close</mat-icon>
       </button>
     </div>
+
+    <span class="layout__tabs-spacer"></span>
+
+    <button
+      mat-icon-button
+      type="button"
+      class="properties-toggle-btn properties-toggle-btn--tabs"
+      (click)="toggleProperties()"
+      [matTooltip]="propertiesVisible ? 'Properties 숨기기' : 'Properties 표시하기'"
+      aria-label="Properties 토글"
+    >
+      <mat-icon>{{
+        propertiesVisible ? 'chevron_right' : 'chevron_left'
+      }}</mat-icon>
+    </button>
   </div>
 
   <div class="layout__content">
@@ -43,7 +58,11 @@
       ></app-diagram-workspace>
     </section>
 
-    <aside class="layout__properties" aria-label="Properties">
+    <aside
+      class="layout__properties"
+      [class.layout__properties--hidden]="!propertiesVisible"
+      aria-label="Properties"
+    >
       <div class="layout__properties-head">
         <h2 class="layout__properties-title">Properties</h2>
         <p class="layout__properties-hint mat-caption">

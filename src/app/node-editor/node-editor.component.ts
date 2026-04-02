@@ -81,6 +81,8 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   activeDiagramId = this.diagrams[0].id;
   private nextDiagramIndex = 2;
 
+  propertiesVisible = true;
+
   /** 새 탭 + Ctrl+I 가져오기 시 한 번만 자식에 전달 */
   pendingImport: { diagramId: string; cells: object[] } | null = null;
 
@@ -111,6 +113,11 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
       this.activeDiagramId = pick.id;
     }
     this.diagrams = next;
+  }
+
+  toggleProperties(): void {
+    this.propertiesVisible = !this.propertiesVisible;
+    this.cdr.markForCheck();
   }
 
   trackByDiagramId(_: number, diagram: { id: string }): string {
