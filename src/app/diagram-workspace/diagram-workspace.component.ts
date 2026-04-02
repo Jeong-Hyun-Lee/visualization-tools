@@ -4,10 +4,14 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  EventEmitter,
   HostListener,
   Input,
   NgZone,
+  OnChanges,
   OnDestroy,
+  Output,
+  SimpleChanges,
   ViewChild,
 } from '@angular/core';
 import { Edge, Graph, Node } from '@antv/x6';
@@ -62,6 +66,7 @@ import {
   SLD_PORTS_SMALL_BOX,
   SLD_PORTS_TERMINAL,
 } from '../node-editor/sld-node-registry';
+import { parseSldImportPayload } from '../node-editor/sld-import-payload';
 
 /** `buildBayTemplateMeta` 높이와 동일 — 드롭 미리보기 세로 중앙에 모선·차단기 축 맞춤 */
 const BAY_TEMPLATE_PREVIEW_H = 64;
@@ -89,8 +94,14 @@ interface FileSystemWritableLike {
   styleUrls: ['./diagram-workspace.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
+export class DiagramWorkspaceComponent
+  implements AfterViewInit, OnDestroy, OnChanges
+{
   @Input() diagramName = '새 다이어그램';
+  /** 부모(node-editor)에서 새 탭으로 JSON을 넣을 때만 전달, 적용 후 `pendingImportConsumed`로 비움 */
+  @Input() pendingImportCells: object[] | null = null;
+
+  @Output() readonly pendingImportConsumed = new EventEmitter<void>();
 
   @ViewChild('stencilHost', { static: true })
   stencilHost!: ElementRef<HTMLDivElement>;
@@ -129,6 +140,20 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
     this.loadStencil();
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (
+      changes['pendingImportCells'] &&
+      this.graph != null &&
+      this.pendingImportCells != null
+    ) {
+      const cur = changes['pendingImportCells'].currentValue;
+      const prev = changes['pendingImportCells'].previousValue;
+      if (cur !== prev) {
+        this.tryConsumePendingImport();
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.ioMessageTimer) {
       clearTimeout(this.ioMessageTimer);
@@ -154,7 +179,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
       (ev.ctrlKey || ev.metaKey) &&
       !ev.shiftKey &&
       !ev.altKey &&
-      ev.code === 'KeyS'
+      ev.code === 'KeyE'
     ) {
       if (inEditable || !this.isActiveWorkspaceTab()) {
         return;
@@ -323,7 +348,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
           const raw = reader.result as string;
           const text = raw.replace(/^\uFEFF/, '');
           const parsed = JSON.parse(text) as unknown;
-          const graphData = this.parseImportPayload(parsed);
+          const graphData = parseSldImportPayload(parsed);
           this.graph!.fromJSON(graphData);
           this.graph!.cleanHistory();
           this.graph!.cleanSelection();
@@ -346,28 +371,24 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
     reader.readAsText(file, 'utf-8');
   }
 
-  private parseImportPayload(data: unknown): { cells: object[] } {
-    if (Array.isArray(data)) {
-      return { cells: data as object[] };
+  private tryConsumePendingImport(): void {
+    if (!this.graph || this.pendingImportCells == null) {
+      return;
     }
-    if (data == null || typeof data !== 'object') {
-      throw new Error('invalid root');
+    try {
+      this.graph.fromJSON({ cells: this.pendingImportCells });
+      this.graph.cleanHistory();
+      this.graph.cleanSelection();
+      this.graph.centerContent({ padding: 24 });
+      this.showIoMessage('다이어그램을 불러왔습니다.');
+      this.pendingImportConsumed.emit();
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('SLD pending import failed', err);
+      this.showIoMessage(`가져오기에 실패했습니다. ${detail}`);
+      this.pendingImportConsumed.emit();
     }
-    const root = data as Record<string, unknown>;
-    if (root['format'] === 'ge-vernova-sld' && root['graph'] != null) {
-      const g = root['graph'];
-      if (g != null && typeof g === 'object') {
-        const cells = (g as Record<string, unknown>)['cells'];
-        if (Array.isArray(cells)) {
-          return { cells: cells as object[] };
-        }
-      }
-      throw new Error('missing graph.cells');
-    }
-    if (Array.isArray(root['cells'])) {
-      return { cells: root['cells'] as object[] };
-    }
-    throw new Error('unsupported format');
+    this.cdr.markForCheck();
   }
 
   private showIoMessage(text: string): void {
@@ -645,6 +666,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
 
     this.graph = g;
     this.initStencil(g);
+    this.tryConsumePendingImport();
   }
 
   private bindMinimapContentRefresh(g: Graph): void {

@@ -1,4 +1,13 @@
 <div class="layout">
+  <input
+    #globalImportInput
+    type="file"
+    accept=".json,application/json"
+    hidden
+    (change)="onGlobalImportFileSelected($event)"
+    aria-hidden="true"
+  />
+
   <div class="layout__tabs" role="tablist" aria-label="다이어그램 탭">
     <div
       class="layout__tab"
@@ -26,8 +35,10 @@
   <div class="layout__content">
     <section class="layout__workspace">
       <app-diagram-workspace
-        *ngFor="let diagram of diagrams"
+        *ngFor="let diagram of diagrams; trackBy: trackByDiagramId"
         [diagramName]="diagram.name"
+        [pendingImportCells]="pendingCellsForDiagram(diagram.id)"
+        (pendingImportConsumed)="onPendingImportConsumed()"
         [class.layout__workspace-item--hidden]="diagram.id !== activeDiagramId"
       ></app-diagram-workspace>
     </section>
