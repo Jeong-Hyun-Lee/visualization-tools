@@ -68,6 +68,21 @@ const BAY_TEMPLATE_PREVIEW_H = 64;
 /** 인접 노드 사이 가로 간격 — 맨해튼 라우터가 노드 박스를 피해 돌지 않도록 여유 */
 const BAY_TEMPLATE_GAP_X = 64;
 
+type SaveFilePickerFn = (options?: {
+  suggestedName?: string;
+  types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+}) => Promise<FileSystemSaveHandle>;
+
+/** Chromium File System Access — lib.dom 버전에 따라 생략될 수 있음 */
+interface FileSystemSaveHandle {
+  createWritable(): Promise<FileSystemWritableLike>;
+}
+
+interface FileSystemWritableLike {
+  write(data: Blob): Promise<void>;
+  close(): Promise<void>;
+}
+
 @Component({
   selector: 'app-diagram-workspace',
   templateUrl: './diagram-workspace.component.html',
@@ -102,6 +117,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
   constructor(
     private readonly cdr: ChangeDetectorRef,
     private readonly ngZone: NgZone,
+    private readonly hostRef: ElementRef<HTMLElement>,
   ) {}
 
   ngAfterViewInit(): void {
@@ -127,16 +143,31 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onDocKeydown(ev: KeyboardEvent): void {
+    const target = ev.target as HTMLElement | null;
+    const inEditable =
+      target != null &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.getAttribute('contenteditable') === 'true');
+
+    if (
+      (ev.ctrlKey || ev.metaKey) &&
+      !ev.shiftKey &&
+      !ev.altKey &&
+      ev.code === 'KeyS'
+    ) {
+      if (inEditable || !this.isActiveWorkspaceTab()) {
+        return;
+      }
+      ev.preventDefault();
+      this.exportDiagram();
+      return;
+    }
+
     if (ev.code !== 'Space' || this.spaceDown) {
       return;
     }
-    const target = ev.target as HTMLElement | null;
-    if (
-      target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.getAttribute('contenteditable') === 'true')
-    ) {
+    if (inEditable || !this.isActiveWorkspaceTab()) {
       return;
     }
 
@@ -151,6 +182,13 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
     }
     this.spaceDown = false;
     this.graph?.enableSelection?.();
+  }
+
+  /** 숨김 탭의 워크스페이스는 전역 단축키(저장, 스페이스 팬)에서 무시 */
+  private isActiveWorkspaceTab(): boolean {
+    return !this.hostRef.nativeElement.classList.contains(
+      'layout__workspace-item--hidden',
+    );
   }
 
   zoomToFit(): void {
@@ -188,6 +226,10 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
   }
 
   exportDiagram(): void {
+    void this.exportDiagramAsync();
+  }
+
+  private async exportDiagramAsync(): Promise<void> {
     if (!this.graph) {
       return;
     }
@@ -198,20 +240,65 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
       exportedAt: new Date().toISOString(),
       graph,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    const json = JSON.stringify(payload, null, 2);
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const filename = `sld-diagram-${stamp}.json`;
+
+    const picker = (
+      window as Window & { showSaveFilePicker?: SaveFilePickerFn }
+    ).showSaveFilePicker?.bind(window);
+    if (picker != null && window.isSecureContext) {
+      try {
+        const handle = await picker({
+          suggestedName: filename,
+          types: [
+            {
+              description: 'JSON',
+              accept: { 'application/json': ['.json'] },
+            },
+          ],
+        });
+        const writable = await (
+          handle as FileSystemSaveHandle
+        ).createWritable();
+        await writable.write(new Blob([json], { type: 'application/json;charset=utf-8' }));
+        await writable.close();
+        this.ngZone.run(() => {
+          this.showIoMessage('다이어그램을 JSON 파일로 저장했습니다.');
+          this.cdr.markForCheck();
+        });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        const detail = err instanceof Error ? err.message : String(err);
+        console.error('SLD export failed', err);
+        this.ngZone.run(() => {
+          this.showIoMessage(`저장에 실패했습니다. ${detail}`);
+          this.cdr.markForCheck();
+        });
+      }
+      return;
+    }
+
+    const blob = new Blob([json], {
       type: 'application/json;charset=utf-8',
     });
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sld-diagram-${stamp}.json`;
+    a.download = filename;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    this.showIoMessage('다이어그램을 JSON 파일로 저장했습니다.');
+    this.ngZone.run(() => {
+      this.showIoMessage(
+        '다운로드가 시작되었습니다. 브라우저에서 저장을 마치면 디스크에 반영됩니다.',
+      );
+      this.cdr.markForCheck();
+    });
   }
 
   openImportFilePicker(): void {
