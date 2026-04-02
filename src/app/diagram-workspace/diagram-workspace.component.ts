@@ -103,6 +103,12 @@ export class DiagramWorkspaceComponent
 
   @Output() readonly pendingImportConsumed = new EventEmitter<void>();
 
+  /** 가져오기 버튼에서 읽은 파일 내용을 부모로 올려 새 탭에 적용 */
+  @Output() readonly importToNewTab = new EventEmitter<{
+    fileName: string;
+    cells: object[];
+  }>();
+
   @ViewChild('stencilHost', { static: true })
   stencilHost!: ElementRef<HTMLDivElement>;
 
@@ -267,7 +273,7 @@ export class DiagramWorkspaceComponent
     };
     const json = JSON.stringify(payload, null, 2);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const filename = `sld-diagram-${stamp}.json`;
+    const filename = `sld-${stamp}.json`;
 
     const picker = (
       window as Window & { showSaveFilePicker?: SaveFilePickerFn }
@@ -286,7 +292,9 @@ export class DiagramWorkspaceComponent
         const writable = await (
           handle as FileSystemSaveHandle
         ).createWritable();
-        await writable.write(new Blob([json], { type: 'application/json;charset=utf-8' }));
+        await writable.write(
+          new Blob([json], { type: 'application/json;charset=utf-8' }),
+        );
         await writable.close();
         this.ngZone.run(() => {
           this.showIoMessage('다이어그램을 JSON 파일로 저장했습니다.');
@@ -338,7 +346,7 @@ export class DiagramWorkspaceComponent
   onImportFileSelected(ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file || !this.graph) {
+    if (!file) {
       return;
     }
     const reader = new FileReader();
@@ -348,12 +356,8 @@ export class DiagramWorkspaceComponent
           const raw = reader.result as string;
           const text = raw.replace(/^\uFEFF/, '');
           const parsed = JSON.parse(text) as unknown;
-          const graphData = parseSldImportPayload(parsed);
-          this.graph!.fromJSON(graphData);
-          this.graph!.cleanHistory();
-          this.graph!.cleanSelection();
-          this.graph!.centerContent({ padding: 24 });
-          this.showIoMessage('다이어그램을 불러왔습니다.');
+          const { cells } = parseSldImportPayload(parsed);
+          this.importToNewTab.emit({ fileName: file.name, cells });
         } catch (err) {
           const detail = err instanceof Error ? err.message : String(err);
           console.error('SLD import failed', err);

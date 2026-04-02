@@ -7,7 +7,11 @@
 
     <span class="workspace__topbar-spacer"></span>
 
-    <div class="workspace__topbar-actions" role="toolbar" aria-label="편집 도구">
+    <div
+      class="workspace__topbar-actions"
+      role="toolbar"
+      aria-label="편집 도구"
+    >
       <button
         mat-flat-button
         class="workspace__action-btn"
@@ -92,7 +96,7 @@
         matTooltip="그룹 해제 (Ctrl+Shift+G)"
       >
         <mat-icon>folder_off</mat-icon>
-        언그룹
+        그룹 해제
       </button>
 
       <button
@@ -113,7 +117,11 @@
   </div>
 
   <div class="workspace__body">
-    <div #stencilHost class="workspace__stencil" aria-label="Stencil 패널"></div>
+    <div
+      #stencilHost
+      class="workspace__stencil"
+      aria-label="Stencil 패널"
+    ></div>
 
     <div
       #graphHost

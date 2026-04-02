@@ -135,6 +135,17 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** 가져오기 버튼(import)에서 들어온 파일을 '무조건' 새 탭으로 생성 */
+  onImportToNewTab(ev: { fileName: string; cells: object[] }): void {
+    const tabName = this.tabNameFromFileName(ev.fileName);
+    const id = `sld-${this.nextDiagramIndex}`;
+    this.nextDiagramIndex += 1;
+    this.pendingImport = { diagramId: id, cells: ev.cells };
+    this.diagrams = [...this.diagrams, { id, name: tabName }];
+    this.activeDiagramId = id;
+    this.cdr.markForCheck();
+  }
+
   openGlobalImport(): void {
     const input = this.globalImportInput?.nativeElement;
     if (!input) {

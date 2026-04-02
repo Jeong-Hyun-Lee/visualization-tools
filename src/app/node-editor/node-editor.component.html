@@ -54,6 +54,7 @@
         [diagramName]="diagram.name"
         [pendingImportCells]="pendingCellsForDiagram(diagram.id)"
         (pendingImportConsumed)="onPendingImportConsumed()"
+        (importToNewTab)="onImportToNewTab($event)"
         [class.layout__workspace-item--hidden]="diagram.id !== activeDiagramId"
       ></app-diagram-workspace>
     </section>
