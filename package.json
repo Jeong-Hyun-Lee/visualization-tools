@@ -76,6 +76,11 @@
     "directories": {
       "output": "release"
     },
+    "nsis": {
+      "perMachine": true,
+      "allowElevation": true,
+      "include": "build/installer.nsh"
+    },
     "win": {
       "target": [
         "nsis"
