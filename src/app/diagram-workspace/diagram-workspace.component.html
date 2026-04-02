@@ -101,6 +101,17 @@
 
       <button
         mat-flat-button
+        class="workspace__action-btn"
+        type="button"
+        (click)="saveSessionRequested.emit()"
+        matTooltip="현재 열려있는 모든 탭 저장 (Ctrl+S)"
+      >
+        <mat-icon>save</mat-icon>
+        저장
+      </button>
+
+      <button
+        mat-flat-button
         class="workspace__action-btn workspace__action-btn--danger"
         type="button"
         (click)="deleteSelected()"

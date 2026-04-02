@@ -51,10 +51,12 @@
     <section class="layout__workspace">
       <app-diagram-workspace
         *ngFor="let diagram of diagrams; trackBy: trackByDiagramId"
+        [diagramId]="diagram.id"
         [diagramName]="diagram.name"
         [pendingImportCells]="pendingCellsForDiagram(diagram.id)"
         (pendingImportConsumed)="onPendingImportConsumed()"
         (importToNewTab)="onImportToNewTab($event)"
+        (saveSessionRequested)="saveAllTabsToIndexDB()"
         [class.layout__workspace-item--hidden]="diagram.id !== activeDiagramId"
       ></app-diagram-workspace>
     </section>

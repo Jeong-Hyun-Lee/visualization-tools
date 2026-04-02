@@ -97,6 +97,7 @@ interface FileSystemWritableLike {
 export class DiagramWorkspaceComponent
   implements AfterViewInit, OnDestroy, OnChanges
 {
+  @Input() diagramId = '';
   @Input() diagramName = '새 다이어그램';
   /** 부모(node-editor)에서 새 탭으로 JSON을 넣을 때만 전달, 적용 후 `pendingImportConsumed`로 비움 */
   @Input() pendingImportCells: object[] | null = null;
@@ -108,6 +109,9 @@ export class DiagramWorkspaceComponent
     fileName: string;
     cells: object[];
   }>();
+
+  /** node-editor에서 '현재 열려있는 모든 탭 저장'을 수행하도록 요청 */
+  @Output() readonly saveSessionRequested = new EventEmitter<void>();
 
   @ViewChild('stencilHost', { static: true })
   stencilHost!: ElementRef<HTMLDivElement>;
@@ -258,6 +262,25 @@ export class DiagramWorkspaceComponent
 
   exportDiagram(): void {
     void this.exportDiagramAsync();
+  }
+
+  /** 저장용: exportDiagram과 동일한 export JSON payload를 graph 상태에서 생성합니다. */
+  getExportPayload(): {
+    format: 'ge-vernova-sld';
+    version: 1;
+    exportedAt: string;
+    graph: unknown;
+  } | null {
+    if (!this.graph) {
+      return null;
+    }
+    const graph = this.graph.toJSON();
+    return {
+      format: 'ge-vernova-sld',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      graph,
+    };
   }
 
   private async exportDiagramAsync(): Promise<void> {

@@ -4,16 +4,24 @@ import {
   Component,
   ElementRef,
   HostListener,
+  AfterViewInit,
   NgZone,
   OnDestroy,
   OnInit,
+  QueryList,
   ViewChild,
+  ViewChildren,
 } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { NewDiagramRequestService } from '../new-diagram-request.service';
 import { parseSldImportPayload } from './sld-import-payload';
+import {
+  saveCurrentSldSessionToIndexDB,
+  type SldSavedSession,
+} from '../indexdb/sld-session-indexdb';
+import { DiagramWorkspaceComponent } from '../diagram-workspace/diagram-workspace.component';
 
 @Component({
   selector: 'app-node-editor',
@@ -26,6 +34,9 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
 
   @ViewChild('globalImportInput', { static: true })
   globalImportInput!: ElementRef<HTMLInputElement>;
+
+  @ViewChildren(DiagramWorkspaceComponent)
+  private readonly workspaces!: QueryList<DiagramWorkspaceComponent>;
 
   constructor(
     private readonly newDiagramRequest: NewDiagramRequestService,
@@ -53,6 +64,29 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
       }
       ev.preventDefault();
       this.openGlobalImport();
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocKeydownSave(ev: KeyboardEvent): void {
+    const target = ev.target as HTMLElement | null;
+    const inEditable =
+      target != null &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.getAttribute('contenteditable') === 'true');
+
+    if (
+      (ev.ctrlKey || ev.metaKey) &&
+      !ev.shiftKey &&
+      !ev.altKey &&
+      ev.code === 'KeyS'
+    ) {
+      if (inEditable) {
+        return;
+      }
+      ev.preventDefault();
+      void this.saveAllTabsToIndexDB();
     }
   }
 
@@ -118,6 +152,42 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   toggleProperties(): void {
     this.propertiesVisible = !this.propertiesVisible;
     this.cdr.markForCheck();
+  }
+
+  async saveAllTabsToIndexDB(): Promise<void> {
+    const workspaces = this.workspaces?.toArray() ?? [];
+    const wsById = new Map(workspaces.map((w) => [w.diagramId, w]));
+
+    const tabs = this.diagrams
+      .map((d) => {
+        const ws = wsById.get(d.id);
+        const payload = ws?.getExportPayload?.() ?? null;
+        if (!payload) {
+          return null;
+        }
+        return {
+          diagramId: d.id,
+          diagramName: d.name,
+          payload,
+        };
+      })
+      .filter((t): t is NonNullable<typeof t> => t != null);
+
+    const session: SldSavedSession = {
+      format: 'ge-vernova-sld-session',
+      version: 1,
+      savedAt: new Date().toISOString(),
+      tabs,
+    };
+
+    try {
+      await saveCurrentSldSessionToIndexDB(session);
+      window.alert(`현재 탭들을 저장했습니다. (${tabs.length}개)`);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('IndexDB save failed', err);
+      window.alert(`저장에 실패했습니다.\n${detail}`);
+    }
   }
 
   trackByDiagramId(_: number, diagram: { id: string }): string {
