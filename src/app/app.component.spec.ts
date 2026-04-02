@@ -17,9 +17,9 @@ describe('AppComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it(`should have as title 'GEVernova'`, () => {
+  it(`should have as title 'GE Vernova'`, () => {
     const fixture = TestBed.createComponent(AppComponent);
-    expect(fixture.componentInstance.title).toEqual('GEVernova');
+    expect(fixture.componentInstance.title).toEqual('GE Vernova');
   });
 
   it('should render title in toolbar', () => {
@@ -27,7 +27,7 @@ describe('AppComponent', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.brand')?.textContent).toContain(
-      'GEVernova',
+      'GE Vernova',
     );
   });
 });

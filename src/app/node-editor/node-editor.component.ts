@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+import { NewDiagramRequestService } from '../new-diagram-request.service';
 
 @Component({
   selector: 'app-node-editor',
@@ -6,8 +16,34 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   styleUrls: ['./node-editor.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NodeEditorComponent {
-  readonly diagrams: { id: string; name: string }[] = [
+export class NodeEditorComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(
+    private readonly newDiagramRequest: NewDiagramRequestService,
+    private readonly cdr: ChangeDetectorRef,
+  ) {}
+
+  ngOnInit(): void {
+    this.newDiagramRequest.requested$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.addDiagram();
+        this.cdr.markForCheck();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /** Properties 패널 목업용 (도메인 연동 없음) */
+  mockVoltage = '345';
+  mockState = 'normal';
+  mockTagId = 'SLD-BUS-001';
+
+  diagrams: { id: string; name: string }[] = [
     { id: 'sld-1', name: 'SLD 1' },
   ];
   activeDiagramId = this.diagrams[0].id;
@@ -17,7 +53,7 @@ export class NodeEditorComponent {
     const name = `SLD ${this.nextDiagramIndex}`;
     const id = `sld-${this.nextDiagramIndex}`;
     this.nextDiagramIndex += 1;
-    this.diagrams.push({ id, name });
+    this.diagrams = [...this.diagrams, { id, name }];
     this.activeDiagramId = id;
   }
 
@@ -25,7 +61,7 @@ export class NodeEditorComponent {
     this.activeDiagramId = id;
   }
 
-  closeDiagram(id: string, ev: MouseEvent): void {
+  closeDiagram(id: string, ev: Event): void {
     ev.stopPropagation();
     if (this.diagrams.length === 1) {
       return;
@@ -34,10 +70,11 @@ export class NodeEditorComponent {
     if (idx < 0) {
       return;
     }
-    this.diagrams.splice(idx, 1);
+    const next = this.diagrams.filter((d) => d.id !== id);
     if (this.activeDiagramId === id) {
-      const fallback = this.diagrams[Math.max(0, idx - 1)];
-      this.activeDiagramId = fallback.id;
+      const pick = next[idx - 1] ?? next[idx] ?? next[0];
+      this.activeDiagramId = pick.id;
     }
+    this.diagrams = next;
   }
 }

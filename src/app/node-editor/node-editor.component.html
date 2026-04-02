@@ -1,31 +1,26 @@
 <div class="layout">
-  <header class="layout__header">
-    <div class="layout__title-wrap">
-      <div class="layout__title">Substation Name</div>
-    </div>
-    <button mat-stroked-button type="button" class="layout__add-btn" (click)="addDiagram()">
-      <mat-icon>add</mat-icon>
-      새 다이어그램
-    </button>
-  </header>
-
   <div class="layout__tabs" role="tablist" aria-label="다이어그램 탭">
-    <button
-      type="button"
+    <div
       class="layout__tab"
       *ngFor="let diagram of diagrams"
       [class.layout__tab--active]="diagram.id === activeDiagramId"
+      role="tab"
+      [attr.aria-selected]="diagram.id === activeDiagramId"
       (click)="selectDiagram(diagram.id)"
     >
-      <span>{{ diagram.name }}</span>
-      <mat-icon
+      <span class="layout__tab-label">{{ diagram.name }}</span>
+      <button
+        mat-icon-button
+        type="button"
         class="layout__tab-close"
         *ngIf="diagrams.length > 1"
+        aria-label="탭 닫기"
+        matTooltip="탭 닫기"
         (click)="closeDiagram(diagram.id, $event)"
       >
-        close
-      </mat-icon>
-    </button>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
   </div>
 
   <div class="layout__content">
@@ -38,7 +33,77 @@
     </section>
 
     <aside class="layout__properties" aria-label="Properties">
-      <div class="layout__properties-title">Properties</div>
+      <div class="layout__properties-head">
+        <h2 class="layout__properties-title">Properties</h2>
+        <p class="layout__properties-hint mat-caption">
+          UI 목업 — 실제 바인딩 없음
+        </p>
+      </div>
+
+      <mat-card class="props-mat-card">
+        <mat-card-subtitle>선택 요소</mat-card-subtitle>
+        <mat-card-content>
+          <p class="props-muted">노드를 선택하세요</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="props-mat-card">
+        <mat-card-content class="props-mat-form-stack">
+          <mat-form-field appearance="outline" class="props-mat-field">
+            <mat-label>표시 이름</mat-label>
+            <input matInput readonly placeholder="예: Main Bus A" tabindex="-1" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="props-mat-field props-mat-field--mono">
+            <mat-label>태그 / ID</mat-label>
+            <input
+              matInput
+              name="mockTagId"
+              readonly
+              [(ngModel)]="mockTagId"
+              tabindex="-1"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="props-mat-field">
+            <mat-label>정격 전압</mat-label>
+            <mat-select [(ngModel)]="mockVoltage" disabled name="mockVoltage">
+              <mat-option value="154">154 kV</mat-option>
+              <mat-option value="345">345 kV</mat-option>
+              <mat-option value="765">765 kV</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="props-mat-field">
+            <mat-label>운전 상태</mat-label>
+            <mat-select [(ngModel)]="mockState" disabled name="mockState">
+              <mat-option value="normal">정상</mat-option>
+              <mat-option value="maint">정비</mat-option>
+              <mat-option value="open">개폐기 열림</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="props-mat-field">
+            <mat-label>비고</mat-label>
+            <textarea
+              matInput
+              rows="3"
+              placeholder="메모를 입력하는 필드 예시"
+              readonly
+              tabindex="-1"
+            ></textarea>
+          </mat-form-field>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="props-mat-card props-mat-card--chips">
+        <mat-card-content>
+          <mat-chip-list aria-label="태그 예시">
+            <mat-chip>베이 그룹</mat-chip>
+            <mat-chip class="props-mat-chip--outline">SCADA 연동 예정</mat-chip>
+          </mat-chip-list>
+        </mat-card-content>
+      </mat-card>
     </aside>
   </div>
 </div>

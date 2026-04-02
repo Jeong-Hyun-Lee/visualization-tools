@@ -5,10 +5,22 @@
     <span class="app-toolbar__chip">Node Editor</span>
   </div>
   <span class="spacer"></span>
-  <button mat-flat-button class="app-toolbar__action" type="button">
-    <mat-icon>settings</mat-icon>
-    Settings
-  </button>
+  <div class="app-toolbar__actions">
+    <button
+      mat-flat-button
+      class="app-toolbar__action app-toolbar__action--new-diagram"
+      type="button"
+      matTooltip="새 다이어그램 탭 추가"
+      (click)="onRequestNewDiagram()"
+    >
+      <mat-icon>add</mat-icon>
+      새 다이어그램
+    </button>
+    <button mat-flat-button class="app-toolbar__action" type="button">
+      <mat-icon>settings</mat-icon>
+      Settings
+    </button>
+  </div>
 </mat-toolbar>
 
 <main>
