@@ -33,17 +33,40 @@ import {
   SLD_PORTS_LOAD,
   SLD_PORTS_TRANSFORMER,
   buildSldBusMeta,
+  buildSldBusVMeta,
   buildSldBreakerMeta,
+  buildSldCtMeta,
   buildSldDisconnectorMeta,
+  buildSldEquipmentRegionMeta,
+  buildSldFuseMeta,
   buildSldGeneratorMeta,
   buildSldGroundMeta,
+  buildSldIndicatorMeta,
   buildSldLoadMeta,
+  buildSldMeterMeta,
+  buildSldPotheadMeta,
   buildSldPorts,
+  buildSldRelayMeta,
+  buildSldSbMeta,
+  buildSldTerminalMeta,
   buildSldTransformerMeta,
+  buildSldTsMeta,
   ensureGlobalX6Styles,
   registerSldEdge,
   registerSldShapes,
+  SLD_PORTS_CT,
+  SLD_PORTS_FUSE,
+  SLD_PORTS_METER,
+  SLD_PORTS_POTHEAD,
+  SLD_PORTS_RELAY,
+  SLD_PORTS_SMALL_BOX,
+  SLD_PORTS_TERMINAL,
 } from '../node-editor/sld-node-registry';
+
+/** `buildBayTemplateMeta` 높이와 동일 — 드롭 미리보기 세로 중앙에 모선·차단기 축 맞춤 */
+const BAY_TEMPLATE_PREVIEW_H = 64;
+/** 인접 노드 사이 가로 간격 — 맨해튼 라우터가 노드 박스를 피해 돌지 않도록 여유 */
+const BAY_TEMPLATE_GAP_X = 64;
 
 @Component({
   selector: 'app-diagram-workspace',
@@ -571,35 +594,44 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
       target: graph,
       search(cell, keyword) {
         const lowerKeyword = keyword.toLowerCase();
-        return cell.shape.indexOf(lowerKeyword) !== -1;
+        if (cell.shape.toLowerCase().indexOf(lowerKeyword) !== -1) {
+          return true;
+        }
+        if (cell.isNode()) {
+          const kind = cell.getData<{ kind?: string }>()?.kind;
+          return (
+            kind != null && kind.toLowerCase().indexOf(lowerKeyword) !== -1
+          );
+        }
+        return false;
       },
       placeholder: '검색어를 입력하세요',
       stencilGraphWidth: 240,
-      stencilGraphHeight: 700,
+      stencilGraphHeight: 1700,
       collapsable: true,
       groups: [
         {
-          title: '노드 그룹',
+          title: 'SLD 노드',
           collapsable: true,
           name: 'sld-node',
-          graphHeight: 700,
+          graphHeight: 1700,
           layoutOptions: {
             columns: 1,
             columnWidth: 230,
-            rowHeight: 96,
+            rowHeight: 88,
             dx: 0,
             dy: 8,
           },
         },
         {
-          title: '베이 그룹',
+          title: '베이 템플릿',
           collapsable: true,
           name: 'sld-bay-group',
-          graphHeight: 220,
+          graphHeight: 280,
           layoutOptions: {
             columns: 1,
             columnWidth: 230,
-            rowHeight: 96,
+            rowHeight: 108,
             dx: 0,
             dy: 8,
           },
@@ -628,12 +660,23 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
       this.stencil.load(
         [
           buildSldBusMeta(buildSldPorts('horizontal')),
+          buildSldBusVMeta(buildSldPorts('vertical')),
+          buildSldTerminalMeta(SLD_PORTS_TERMINAL),
           buildSldBreakerMeta(SLD_PORTS_BREAKER),
-          buildSldLoadMeta(SLD_PORTS_LOAD),
-          buildSldTransformerMeta(SLD_PORTS_TRANSFORMER),
           buildSldDisconnectorMeta(SLD_PORTS_DISCONNECTOR),
-          buildSldGroundMeta(SLD_PORTS_GROUND),
+          buildSldFuseMeta(SLD_PORTS_FUSE),
+          buildSldTransformerMeta(SLD_PORTS_TRANSFORMER),
+          buildSldCtMeta(SLD_PORTS_CT),
+          buildSldRelayMeta(SLD_PORTS_RELAY),
+          buildSldMeterMeta(SLD_PORTS_METER),
+          buildSldLoadMeta(SLD_PORTS_LOAD),
           buildSldGeneratorMeta(SLD_PORTS_GENERATOR),
+          buildSldGroundMeta(SLD_PORTS_GROUND),
+          buildSldTsMeta(SLD_PORTS_SMALL_BOX),
+          buildSldSbMeta(SLD_PORTS_SMALL_BOX),
+          buildSldIndicatorMeta(buildSldPorts('all')),
+          buildSldPotheadMeta(SLD_PORTS_POTHEAD),
+          buildSldEquipmentRegionMeta(),
         ],
         'sld-node',
       );
@@ -641,14 +684,14 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
       this.stencil.load(
         [
           this.buildBayTemplateMeta(
-            'bay-template-3',
-            '베이 템플릿 (3)',
-            'BUS + CB + LOAD',
+            'bay-template-1',
+            '베이 템플릿 (1)',
+            '모선 + 차단기 + 부하(MOTOR)',
           ),
           this.buildBayTemplateMeta(
-            'bay-template-4',
-            '베이 템플릿 (4)',
-            'BUS + CB + TR + GEN',
+            'bay-template-2',
+            '베이 템플릿 (2)',
+            '모선 + 차단기 + PT/VT + 발전기',
           ),
         ],
         'sld-bay-group',
@@ -657,7 +700,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private buildBayTemplateMeta(
-    kind: 'bay-template-3' | 'bay-template-4',
+    kind: 'bay-template-1' | 'bay-template-2',
     title: string,
     subtitle: string,
   ): Node.Metadata {
@@ -690,7 +733,7 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
     graph.on('node:added', ({ node, options }) => {
       const kind = node.getData<{ kind?: string }>()?.kind;
       if (
-        (kind !== 'bay-template-3' && kind !== 'bay-template-4') ||
+        (kind !== 'bay-template-1' && kind !== 'bay-template-2') ||
         options?.['templateExpanded']
       ) {
         return;
@@ -698,9 +741,9 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
 
       const origin = node.getPosition();
       const templateTitle =
-        kind === 'bay-template-3' ? 'BAY TEMPLATE (3)' : 'BAY TEMPLATE (4)';
+        kind === 'bay-template-1' ? 'BAY TEMPLATE (1)' : 'BAY TEMPLATE (2)';
       const templates =
-        kind === 'bay-template-3'
+        kind === 'bay-template-1'
           ? [
               buildSldBusMeta(buildSldPorts('horizontal')),
               buildSldBreakerMeta(SLD_PORTS_BREAKER),
@@ -713,20 +756,26 @@ export class DiagramWorkspaceComponent implements AfterViewInit, OnDestroy {
               buildSldGeneratorMeta(SLD_PORTS_GENERATOR),
             ];
 
-      const spacing = 220;
-      const y = origin.y;
+      const centerY = origin.y + BAY_TEMPLATE_PREVIEW_H / 2;
 
       graph.removeNode(node);
-      const created = templates.map((meta, idx) =>
-        graph.addNode(
+
+      const created: Node[] = [];
+      let xCursor = origin.x;
+      for (const meta of templates) {
+        const w = (meta.width as number) ?? 0;
+        const h = (meta.height as number) ?? 56;
+        const n = graph.addNode(
           {
             ...meta,
-            x: origin.x + idx * spacing,
-            y,
+            x: xCursor,
+            y: centerY - h / 2,
           } as Node.Metadata,
           { templateExpanded: true },
-        ),
-      );
+        );
+        created.push(n);
+        xCursor += w + BAY_TEMPLATE_GAP_X;
+      }
       for (let i = 0; i < created.length - 1; i += 1) {
         const sourcePort = this.getPortIdByGroup(created[i], 'right');
         const targetPort = this.getPortIdByGroup(created[i + 1], 'left');
