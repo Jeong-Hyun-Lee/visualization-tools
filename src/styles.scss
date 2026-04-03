@@ -260,10 +260,16 @@ body.theme-dark app-diagram-workspace .workspace__canvas {
   border-left-color: rgba(255, 255, 255, 0.06);
 }
 
-body.theme-dark app-diagram-workspace .workspace__io-message {
+body.theme-dark app-sld-io-message .sld-io-message {
   background: rgba(16, 185, 129, 0.15);
   color: #a7f3d0;
   border-bottom-color: rgba(52, 211, 153, 0.25);
+}
+
+body.theme-dark app-sld-io-message .sld-io-message--error {
+  background: rgba(220, 38, 38, 0.18);
+  color: #fecaca;
+  border-bottom-color: rgba(248, 113, 113, 0.35);
 }
 
 body.theme-dark .mat-menu-panel {

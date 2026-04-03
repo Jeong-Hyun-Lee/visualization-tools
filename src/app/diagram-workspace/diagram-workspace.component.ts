@@ -67,6 +67,7 @@ import {
   SLD_PORTS_TERMINAL,
 } from '../node-editor/sld-node-registry';
 import { parseSldImportPayload } from '../node-editor/sld-import-payload';
+import { SldIoMessageService } from '../sld-io-message/sld-io-message.service';
 
 /** `buildBayTemplateMeta` 높이와 동일 — 드롭 미리보기 세로 중앙에 모선·차단기 축 맞춤 */
 const BAY_TEMPLATE_PREVIEW_H = 64;
@@ -132,15 +133,14 @@ export class DiagramWorkspaceComponent
 
   stencilLoaded = false;
   stencilError: string | null = null;
-  ioMessage: string | null = null;
 
   private spaceDown = false;
-  private ioMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly cdr: ChangeDetectorRef,
     private readonly ngZone: NgZone,
     private readonly hostRef: ElementRef<HTMLElement>,
+    private readonly sldIoMessage: SldIoMessageService,
   ) {}
 
   ngAfterViewInit(): void {
@@ -167,10 +167,6 @@ export class DiagramWorkspaceComponent
   }
 
   ngOnDestroy(): void {
-    if (this.ioMessageTimer) {
-      clearTimeout(this.ioMessageTimer);
-      this.ioMessageTimer = null;
-    }
     this.stencil?.dispose();
     this.stencil = undefined;
 
@@ -322,7 +318,9 @@ export class DiagramWorkspaceComponent
         );
         await writable.close();
         this.ngZone.run(() => {
-          this.showIoMessage('다이어그램을 JSON 파일로 저장했습니다.');
+          this.sldIoMessage.showIoMessage(
+            '다이어그램을 JSON 파일로 저장했습니다.',
+          );
           this.cdr.markForCheck();
         });
       } catch (err) {
@@ -332,7 +330,9 @@ export class DiagramWorkspaceComponent
         const detail = err instanceof Error ? err.message : String(err);
         console.error('SLD export failed', err);
         this.ngZone.run(() => {
-          this.showIoMessage(`저장에 실패했습니다. ${detail}`);
+          this.sldIoMessage.showIoMessage(`저장에 실패했습니다. ${detail}`, {
+            variant: 'error',
+          });
           this.cdr.markForCheck();
         });
       }
@@ -352,7 +352,7 @@ export class DiagramWorkspaceComponent
     a.remove();
     URL.revokeObjectURL(url);
     this.ngZone.run(() => {
-      this.showIoMessage(
+      this.sldIoMessage.showIoMessage(
         '다운로드가 시작되었습니다. 브라우저에서 저장을 마치면 디스크에 반영됩니다.',
       );
       this.cdr.markForCheck();
@@ -386,14 +386,21 @@ export class DiagramWorkspaceComponent
         } catch (err) {
           const detail = err instanceof Error ? err.message : String(err);
           console.error('SLD import failed', err);
-          this.showIoMessage(`가져오기에 실패했습니다. ${detail}`);
+          this.sldIoMessage.showIoMessage(
+            `가져오기에 실패했습니다. ${detail}`,
+            {
+              variant: 'error',
+            },
+          );
         }
         this.cdr.markForCheck();
       });
     };
     reader.onerror = () => {
       this.ngZone.run(() => {
-        this.showIoMessage('파일을 읽을 수 없습니다.');
+        this.sldIoMessage.showIoMessage('파일을 읽을 수 없습니다.', {
+          variant: 'error',
+        });
         this.cdr.markForCheck();
       });
     };
@@ -409,27 +416,16 @@ export class DiagramWorkspaceComponent
       this.graph.cleanHistory();
       this.graph.cleanSelection();
       this.graph.centerContent({ padding: 24 });
-      this.showIoMessage('다이어그램을 불러왔습니다.');
+      this.sldIoMessage.showIoMessage('다이어그램을 불러왔습니다.');
       this.pendingImportConsumed.emit({ diagramId: this.diagramId });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('SLD pending import failed', err);
-      this.showIoMessage(`가져오기에 실패했습니다. ${detail}`);
+      this.sldIoMessage.showIoMessage(`가져오기에 실패했습니다. ${detail}`, {
+        variant: 'error',
+      });
       this.pendingImportConsumed.emit({ diagramId: this.diagramId });
     }
-    this.cdr.markForCheck();
-  }
-
-  private showIoMessage(text: string): void {
-    if (this.ioMessageTimer) {
-      clearTimeout(this.ioMessageTimer);
-    }
-    this.ioMessage = text;
-    this.ioMessageTimer = setTimeout(() => {
-      this.ioMessage = null;
-      this.ioMessageTimer = null;
-      this.cdr.markForCheck();
-    }, 4500);
     this.cdr.markForCheck();
   }
 
@@ -535,6 +531,7 @@ export class DiagramWorkspaceComponent
       container: this.graphHost.nativeElement,
       autoResize: true,
       grid: true,
+      virtual: true,
       panning: {
         enabled: true,
         modifiers: ['space'],

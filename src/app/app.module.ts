@@ -8,12 +8,14 @@ import { AppComponent } from './app.component';
 import { MaterialModule } from './material/material.module';
 import { NodeEditorComponent } from './node-editor/node-editor.component';
 import { DiagramWorkspaceComponent } from './diagram-workspace/diagram-workspace.component';
+import { SldIoMessageComponent } from './sld-io-message/sld-io-message.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     NodeEditorComponent,
     DiagramWorkspaceComponent,
+    SldIoMessageComponent,
   ],
   imports: [
     BrowserModule,

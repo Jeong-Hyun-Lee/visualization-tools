@@ -23,6 +23,7 @@ import {
   type SldSavedSession,
 } from '../indexdb/sld-session-indexdb';
 import { DiagramWorkspaceComponent } from '../diagram-workspace/diagram-workspace.component';
+import { SldIoMessageService } from '../sld-io-message/sld-io-message.service';
 
 @Component({
   selector: 'app-node-editor',
@@ -43,6 +44,7 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
     private readonly newDiagramRequest: NewDiagramRequestService,
     private readonly cdr: ChangeDetectorRef,
     private readonly ngZone: NgZone,
+    private readonly sldIoMessage: SldIoMessageService,
   ) {}
 
   @HostListener('document:keydown', ['$event'])
@@ -130,7 +132,9 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('IndexDB restore failed', err);
-      window.alert(`복원에 실패했습니다.\n${detail}`);
+      this.sldIoMessage.showIoMessage(`복원에 실패했습니다. ${detail}`, {
+        variant: 'error',
+      });
     }
   }
 
@@ -217,11 +221,15 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
 
     try {
       await saveCurrentSldSessionToIndexDB(session);
-      window.alert(`현재 탭들을 저장했습니다. (${tabs.length}개)`);
+      this.sldIoMessage.showIoMessage(
+        `현재 탭들을 저장했습니다. (${tabs.length}개)`,
+      );
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       console.error('IndexDB save failed', err);
-      window.alert(`저장에 실패했습니다.\n${detail}`);
+      this.sldIoMessage.showIoMessage(`저장에 실패했습니다. ${detail}`, {
+        variant: 'error',
+      });
     }
   }
 
@@ -286,13 +294,18 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
         } catch (err) {
           const detail = err instanceof Error ? err.message : String(err);
           console.error('SLD global import failed', err);
-          window.alert(`가져오기에 실패했습니다.\n${detail}`);
+          this.sldIoMessage.showIoMessage(`가져오기에 실패했습니다. ${detail}`, {
+            variant: 'error',
+          });
         }
       });
     };
     reader.onerror = () => {
       this.ngZone.run(() => {
-        window.alert('파일을 읽을 수 없습니다.');
+        this.sldIoMessage.showIoMessage('파일을 읽을 수 없습니다.', {
+          variant: 'error',
+        });
+        this.cdr.markForCheck();
       });
     };
     reader.readAsText(file, 'utf-8');
