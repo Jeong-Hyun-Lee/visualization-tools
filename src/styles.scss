@@ -103,9 +103,12 @@ body.theme-dark app-node-editor .layout__tab--active {
   border-bottom-color: #9fa8da;
 }
 
-body.theme-dark app-node-editor .layout__properties {
+body.theme-dark app-node-editor .layout__properties-sidenav {
   background: linear-gradient(180deg, #2a2a2a 0%, #262626 40%);
   border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+body.theme-dark app-node-editor .layout__properties {
   color: rgba(255, 255, 255, 0.9);
 
   .layout__properties-hint,

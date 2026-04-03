@@ -154,7 +154,8 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   activeDiagramId = this.diagrams[0].id;
   private nextDiagramIndex = 2;
 
-  propertiesVisible = true;
+  /** Material sidenav `opened` — Properties 패널 표시 여부 */
+  propertiesOpened = true;
 
   /** pendingImportCells는 탭별로 다중 지원 */
   private pendingImports: Record<string, object[]> = {};
@@ -189,7 +190,7 @@ export class NodeEditorComponent implements OnInit, OnDestroy {
   }
 
   toggleProperties(): void {
-    this.propertiesVisible = !this.propertiesVisible;
+    this.propertiesOpened = !this.propertiesOpened;
     this.cdr.markForCheck();
   }
 

@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -21,6 +22,7 @@ const modules = [
   MatFormFieldModule,
   MatInputModule,
   MatSelectModule,
+  MatSidenavModule,
   MatChipsModule,
   MatIconModule,
   MatMenuModule,
