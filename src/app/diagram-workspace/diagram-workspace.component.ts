@@ -248,6 +248,11 @@ export class DiagramWorkspaceComponent
     return this.graph?.canRedo() ?? false;
   }
 
+  /** 선택된 셀이 1개 이상일 때만 삭제 허용 */
+  canDeleteSelection(): boolean {
+    return (this.graph?.getSelectedCells().length ?? 0) > 0;
+  }
+
   deleteSelected(): void {
     if (!this.graph) {
       return;
@@ -606,6 +611,9 @@ export class DiagramWorkspaceComponent
         showNodeSelectionBox: true,
       }),
     );
+    g.on('selection:changed', () => {
+      this.ngZone.run(() => this.cdr.markForCheck());
+    });
     g.use(
       new History({
         enabled: true,

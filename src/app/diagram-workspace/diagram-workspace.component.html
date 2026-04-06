@@ -115,6 +115,7 @@
         class="workspace__action-btn workspace__action-btn--danger"
         type="button"
         (click)="deleteSelected()"
+        [disabled]="!canDeleteSelection()"
         matTooltip="선택된 셀 삭제 (Del/Backspace)"
       >
         <mat-icon>delete_outline</mat-icon>

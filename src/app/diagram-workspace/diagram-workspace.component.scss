@@ -78,6 +78,9 @@
   background: #fef2f2;
   border-color: #fecaca;
 }
+.workspace__action-btn--danger:disabled {
+  border: 1px solid #dbe3ff;
+}
 
 .workspace__action-btn--danger:hover {
   background: #fee2e2;
